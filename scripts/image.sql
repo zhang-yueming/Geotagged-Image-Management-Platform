@@ -1,0 +1,8 @@
+CREATE TABLE image (
+    image_id INT NOT NULL AUTO_INCREMENT,
+    user_id INT NOT NULL DEFAULT -1,
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    image_name VARCHAR(255) NOT NULL,
+    bucket_key VARCHAR(255) NOT NULL,
+    PRIMARY KEY (image_id)
+);
