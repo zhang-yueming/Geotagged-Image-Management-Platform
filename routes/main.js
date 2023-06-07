@@ -10,7 +10,7 @@ const { ImageMetadata } = require('../db/models/image_metadata');
 
 
 const multer = require('multer');
-const {Op} = require("sequelize");
+const {Op, Sequelize} = require("sequelize");
 
 let upload = multer({
     dest: 'uploads/',  // dest设置上传文件的存放路径，这个路径需要预先创建
@@ -79,21 +79,49 @@ router.get('/getImages', async (req, res) => {
     try {
         const bucketName = process.env.S3_BUCKET;
 
-        //根据条件查询图片
+        // 根据条件查询图片
         let whereClause = {};
-        if(req.query.date){
-            const date = new Date(req.query.date);
-            whereClause.timestamp = {
-                [Op.gte]: date,
-                [Op.lte]: date
-            };
+        if(req.query.bgndate || req.query.enddate){
+            whereClause.timestamp = {};
+            if (req.query.bgndate) {
+                const bgndate = new Date(req.query.bgndate);
+                whereClause.timestamp[Op.gte] = bgndate;
+            }
+            if (req.query.enddate) {
+                const enddate = new Date(req.query.enddate);
+                whereClause.timestamp[Op.lte] = enddate;
+            }
         }
+        // 添加额外的查询参数
+        if(req.query.country) {
+            whereClause.country = req.query.country;
+        }
+        if(req.query.administrative_area_level_1) {
+            whereClause.administrative_area_level_1 = req.query.administrative_area_level_1;
+        }
+        if(req.query.administrative_area_level_2) {
+            whereClause.administrative_area_level_2 = req.query.administrative_area_level_2;
+        }
+        if(req.query.city) {
+            whereClause.city = req.query.city;
+        }
+        if(req.query.street) {
+            whereClause.street = req.query.street;
+        }
+        if(req.query.postal_code) {
+            whereClause.postal_code = req.query.postal_code;
+        }
+
 
         const images = await Image.findAll({
             include: [{
                 model: ImageMetadata,
+                //required: false,
                 where: whereClause
-            }]
+            }],
+            order: [
+                ['update_time', 'DESC']
+            ]
         });
 
         const imageUrls = images.map(image => {
@@ -106,6 +134,61 @@ router.get('/getImages', async (req, res) => {
         res.status(400).json({ "message": err.message });
     }//catch
 });
+
+
+
+//init location autocomplete
+router.get('/initLocation', async (req, res) => {
+    try {
+        let key = req.query.key.toLowerCase();
+        let results = await ImageMetadata.findAll({
+            attributes: ['country', 'administrative_area_level_1', 'administrative_area_level_2', 'city', 'street', 'postal_code'],
+            where: {
+                [Op.or]: [
+                    Sequelize.where(Sequelize.fn('lower', Sequelize.col('country')), 'LIKE', `%${key}%`),
+                    Sequelize.where(Sequelize.fn('lower', Sequelize.col('administrative_area_level_1')), 'LIKE', `%${key}%`),
+                    Sequelize.where(Sequelize.fn('lower', Sequelize.col('administrative_area_level_2')), 'LIKE', `%${key}%`),
+                    Sequelize.where(Sequelize.fn('lower', Sequelize.col('city')), 'LIKE', `%${key}%`),
+                    Sequelize.where(Sequelize.fn('lower', Sequelize.col('street')), 'LIKE', `%${key}%`),
+                    Sequelize.where(Sequelize.fn('lower', Sequelize.col('postal_code')), 'LIKE', `%${key}%`)
+                ]
+            },
+            group: ['country', 'administrative_area_level_1', 'administrative_area_level_2', 'city', 'street', 'postal_code'] // 去重
+        });
+
+        let formattedResults = results.map(result => {
+            let data = result.dataValues;
+            let locationArray = [data.country, data.administrative_area_level_1, data.administrative_area_level_2, data.city, data.street];
+            let nonEmptyData = locationArray.filter(item => item); // 移除为空的项
+            let resultString = nonEmptyData.join(', ');
+            if (data.postal_code) {
+                resultString += ' (' + data.postal_code + ')';
+            }
+
+            // 创建一个包含所有字段和拼接的字符串的对象
+            let item = {
+                resultString: resultString,
+                country: data.country,
+                administrative_area_level_1: data.administrative_area_level_1,
+                administrative_area_level_2: data.administrative_area_level_2,
+                city: data.city,
+                street: data.street,
+                postal_code: data.postal_code
+            };
+
+            return item;
+        });
+
+        // 去重
+        formattedResults = Array.from(new Set(formattedResults.map(JSON.stringify))).map(JSON.parse);
+
+        res.json(formattedResults);
+    } catch (err) {
+        res.status(400).json({ "message": err.message });
+    }
+});
+
+
 
 
 module.exports = router;

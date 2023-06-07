@@ -4,7 +4,46 @@ $(document).ready(function() {
     loadImages();
 
     //
-    initAutocomplete()
+    $("#location").on('input', function() {
+        let value = $(this).val();
+        if (!value) {  // 当 location 输入字段被清空时
+            // 清空所有隐藏的输入字段
+            $('#country').val('');
+            $('#administrative_area_level_1').val('');
+            $('#administrative_area_level_2').val('');
+            $('#city').val('');
+            $('#street').val('');
+            $('#postal_code').val('');
+        }
+
+        $.ajax({
+            url: "/main/initLocation",
+            type: 'GET',
+            data: {
+                key: value
+            },
+            success: function (data) {
+                $("#location").autocomplete({
+                    source: data.map(item => item.resultString),
+                    delay: 300,
+                    select: function(event, ui) {
+                        let selected = data.find(item => item.resultString === ui.item.value);
+                        // 更新隐藏输入框的值
+                        $('#country').val(selected.country);
+                        $('#administrative_area_level_1').val(selected.administrative_area_level_1);
+                        $('#administrative_area_level_2').val(selected.administrative_area_level_2);
+                        $('#city').val(selected.city);
+                        $('#street').val(selected.street);
+                        $('#postal_code').val(selected.postal_code);
+                    }
+                });
+            },
+            error: function (error) {
+                console.log('Error:', error);
+            }
+        });
+    });
+
 
     // Load more images when the user scrolls to the bottom of the page
     $(window).scroll(function() {
@@ -53,16 +92,40 @@ $(document).ready(function() {
 function loadImages() {
     $('#imageContainer').empty();
     $.ajax({
-        url: '/main/getImages', // 替换为你的后端接口地址
+        url: '/main/getImages',
         type: 'GET',
         data: {
-            date:$("#date").val()
+            bgndate: $("#startDate").val(),
+            enddate: $("#endDate").val(),
+            country: $('#country').val(),
+            administrative_area_level_1: $('#administrative_area_level_1').val(),
+            administrative_area_level_2: $('#administrative_area_level_2').val(),
+            city: $('#city').val(),
+            street: $('#street').val(),
+            postal_code: $('#postal_code').val()
         },
         success: function (data) {
-            data.urls.forEach(function(imageSrc) {
+            // data.urls.forEach(function(imageSrc) {
                 // var image = $('<div class="card"><img class="card-img-top" src="' + imageSrc + '" data-bs-original-src="' + imageSrc + '" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Image metadata goes here" onclick="zoomImage(this)"></div>');
-                var image = $('<div class="col-4"><div class="card"><img class="card-img-top" src="' + imageSrc + '" data-bs-original-src="' + imageSrc + '" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Image metadata goes here" onclick="zoomImage(this)"></div></div>');
+
+                // var image = $('<div class="col-4"><div class="card"><img class="card-img-top" src="' + imageSrc + '" data-bs-original-src="' + imageSrc + '" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Image metadata goes here" onclick="zoomImage(this)"></div></div>');
+                // $('#imageContainer').append(image);
+
+            // });
+
+            data.urls.forEach(function(imageSrc) {
+                var image = $('<div class="card"><img class="card-img-top" src="' + imageSrc + '" data-bs-original-src="' + imageSrc + '" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Image metadata goes here" onclick="zoomImage(this)"></div>');
                 $('#imageContainer').append(image);
+            });
+
+            // Initialize Masonry after all images have been loaded
+            var $grid = $('.masonry-grid').masonry({
+                itemSelector: '.card',
+                percentPosition: true
+            });
+
+            $grid.imagesLoaded().progress(function() {
+                $grid.masonry();
             });
             // Refresh tooltips
             enableTooltips();
@@ -92,19 +155,32 @@ function zoomImage(img) {
     });
 }
 
+$("#location").on('input', function() {
+    let value = $(this).val();
+    $.ajax({
+        url: "/main/initLocation",
+        type: 'GET',
+        data: {
+            key: value
+        },
+        success: function (data) {
+            $("#location").autocomplete({
+                source: data,
+                delay: 300 // Delay in milliseconds
+            });
+        },
+        error: function (error) {
+            console.log('Error:', error);
+        }
+    });
+});
+
 
 function initAutocomplete() {
-    var availableTags = [
-        "Chicago, Illinois, United States",
-        "Chico, California, United States",
-        "China, Asia",
-        "666",
-        // Add more tags here...
-    ];
-    $( "#location" ).autocomplete({
-        source: availableTags
-    });
+
+
 }
+
 
 
 

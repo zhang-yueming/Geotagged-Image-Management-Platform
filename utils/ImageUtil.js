@@ -45,7 +45,7 @@ class ImageUtils {
             const response = await client.reverseGeocode({
                 params: {
                     latlng: { lat, lng: lon },
-                    key: process.env.GOOGLE_API_KEY,
+                    key: process.env.GOOGLE_MAP_API_KEY,
                 }
             });
 

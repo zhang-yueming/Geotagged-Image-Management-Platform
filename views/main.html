@@ -10,13 +10,24 @@
     <link href="./css/bootstrap.min.css" rel="stylesheet">
     <link href="./css/jquery-ui.css" rel="stylesheet">
     <style>
-        .card-columns {
-            column-count: 4;
+        /*.card-columns {*/
+        /*    column-count: 4;*/
+        /*}*/
+        /*.card {*/
+        /*    display: inline-block;*/
+        /*    width: 100%;*/
+        /*}*/
+        .masonry-grid {
+            display: flex;
+            margin-left: -30px; /* offset for item negative margin */
+            width: auto;
         }
-        .card {
-            display: inline-block;
-            width: 100%;
+
+        .masonry-grid .card {
+            margin: 0 30px 30px 0;
+            width: calc(33.33% - 30px);
         }
+
     </style>
 </head>
 <body>
@@ -24,7 +35,7 @@
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-md-8">
-            <h1 class="text-center mb-4">Advanced Image Search</h1>
+<!--            <h1 class="text-center mb-4">Advanced Image Search</h1>-->
             <div class="card">
                 <div class="card-body">
                     <form id="searchForm">
@@ -36,10 +47,25 @@
                             <label for="location">Location</label>
                             <input type="text" class="form-control" id="location" placeholder="Enter location...">
                         </div>
-                        <div class="form-group">
-                            <label for="date">Date</label>
-                            <input type="date" class="form-control" id="date">
+                        <!-- hidden inputs -->
+                        <input type="hidden" id="country">
+                        <input type="hidden" id="administrative_area_level_1">
+                        <input type="hidden" id="administrative_area_level_2">
+                        <input type="hidden" id="city">
+                        <input type="hidden" id="street">
+                        <input type="hidden" id="postal_code">
+
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="startDate">Start Date</label>
+                                <input type="date" class="form-control" id="startDate">
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="endDate">End Date</label>
+                                <input type="date" class="form-control" id="endDate">
+                            </div>
                         </div>
+
                         <div class="form-group">
                             <label for="imageUpload">Upload an Image</label>
                             <input type="file" class="form-control-file" id="imageUpload">
@@ -54,8 +80,11 @@
 <!--<div class="container">
     <div id="imageContainer" class="card-columns"></div>
 </div>-->
+<!--<div class="container">-->
+<!--    <div class="row" id="imageContainer"></div>-->
+<!--</div>-->
 <div class="container">
-    <div class="row" id="imageContainer"></div>
+    <div id="imageContainer" class="masonry-grid"></div>
 </div>
 
 
@@ -68,24 +97,11 @@
 <script src="./lib/popper.min.js"></script>
 <script src="./lib/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
 <script src="./lib/jquery-ui.min.js"></script> <!-- Add this line -->
+<script src="https://unpkg.com/masonry-layout@4/dist/masonry.pkgd.min.js"></script>
+<script src="https://unpkg.com/imagesloaded@4/imagesloaded.pkgd.min.js"></script>
 
 
 <script src="js/main_view.js"></script>
-
-<!--<script>-->
-<!--    $( function() {-->
-<!--        var availableTags = [-->
-<!--            "Chicago, Illinois, United States",-->
-<!--            "Chico, California, United States",-->
-<!--            "China, Asia",-->
-<!--            // Add more tags here...-->
-<!--        ];-->
-<!--        $( "#location" ).autocomplete({-->
-<!--            source: availableTags-->
-<!--        });-->
-<!--    } );-->
-<!--</script>-->
-
 
 
 
