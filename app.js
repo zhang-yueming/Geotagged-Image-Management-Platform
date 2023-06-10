@@ -23,6 +23,6 @@ app.use('/main', mainRouter);
 
 
 app.listen(port, () => {
-    sequelize.sync();
+    // sequelize.sync();
     console.log(`Express app listening on port ${port}`);
 });

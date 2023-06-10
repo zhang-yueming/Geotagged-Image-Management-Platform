@@ -3,7 +3,48 @@ $(document).ready(function() {
     // Load initial images
     loadImages();
 
-    //
+    let searchTerm = '';
+    $('#searchLabels').on('select2:select select2:unselect', function () {
+        // Get selected items
+        let selectedLabels = $(this).val();
+
+        // Now `selectedLabels` is an array of the selected label strings
+        console.log(selectedLabels);
+    });
+
+
+    // Capture the select2:close event
+    $('#searchLabels').on('select2:close', function(e) {
+        // After the dropdown has closed, restore the search term
+        var select2Data = $('#searchLabels').data('select2');
+        if (select2Data && select2Data.search && searchTerm) {
+            setTimeout(function() { select2Data.search.val(searchTerm).trigger('keyup'); }, 0);
+        }
+    });
+
+
+    //init labels
+    $('#searchLabels').select2({
+        placeholder: 'Select labels',
+        multiple: true,
+        ajax: {
+            url: '/main/labels',
+            dataType: 'json',
+            delay: 300,
+            processResults: function (data) {
+                return {
+                    results: $.map(data.items, function(label) {
+                        return { id: label.text, text: label.text }
+                    })
+                };
+            },
+            cache: true
+        },
+        minimumInputLength: 1
+    });
+
+
+    //init location
     $("#location").on('input', function() {
         let value = $(this).val();
         if (!value) {  // 当 location 输入字段被清空时
@@ -15,7 +56,6 @@ $(document).ready(function() {
             $('#street').val('');
             $('#postal_code').val('');
         }
-
         $.ajax({
             url: "/main/initLocation",
             type: 'GET',
@@ -45,10 +85,12 @@ $(document).ready(function() {
     });
 
 
+
     // Load more images when the user scrolls to the bottom of the page
     $(window).scroll(function() {
         if ($(window).scrollTop() + $(window).height() === $(document).height()) {
             //loadImages();
+            //瀑布式加载还没做
         }
     });
 
@@ -60,26 +102,45 @@ $(document).ready(function() {
     });
 
     $('#imageUpload').change(function () {
+        var file = $('#imageUpload')[0].files[0];
+
+        // 检查文件类型
+        const allowedImageTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/bmp', 'image/webp', 'image/svg+xml', 'image/tiff'];
+
+        if (!allowedImageTypes.includes(file.type)) {
+            alert("Please select a valid image file (png, jpg, jpeg, gif, bmp, webp, svg, tiff).");
+            $('#imageUpload').val('');
+            return;
+        }
+
         var formData = new FormData();
-        formData.append('file', $('#imageUpload')[0].files[0]);
+        formData.append('file', file);
+
+        // 显示遮罩层和spinner
+        $('#uploadMask').show();
+        $('#uploadSpinner').show();
 
         $.ajax({
-            url: '/main/uploadImg',  // 修改为你的上传接口地址
+            url: '/main/uploadImg',
             type: 'POST',
             data: formData,
-            processData: false,  // 告诉 jQuery 不要去处理发送的数据
-            contentType: false,  // 告诉 jQuery 不要去设置 Content-Type 请求头
+            processData: false,
+            contentType: false,
             success: function (data) {
                 console.log('upload success');
-                // 在这里添加上传成功后的代码
-                $('#imageUpload').val(''); // Clear upload area
+                // 隐藏遮罩层和spinner
+                $('#uploadMask').hide();
+                $('#uploadSpinner').hide();
+                $('#imageUpload').val('');
                 loadImages();
             },
             error: function (data) {
                 console.log('upload error');
-                // 在这里添加上传失败后的代码
-                $('#imageUpload').val(''); // Clear upload area
-            },
+                // 隐藏遮罩层和spinner
+                $('#uploadMask').hide();
+                $('#uploadSpinner').hide();
+                $('#imageUpload').val('');
+            }
         });
     });
 
@@ -89,12 +150,13 @@ $(document).ready(function() {
 
 
 
-function loadImages() {
+    function loadImages() {
     $('#imageContainer').empty();
     $.ajax({
         url: '/main/getImages',
         type: 'GET',
         data: {
+            labels: $('#searchLabels').val(),
             bgndate: $("#startDate").val(),
             enddate: $("#endDate").val(),
             country: $('#country').val(),
@@ -105,28 +167,29 @@ function loadImages() {
             postal_code: $('#postal_code').val()
         },
         success: function (data) {
-            // data.urls.forEach(function(imageSrc) {
-                // var image = $('<div class="card"><img class="card-img-top" src="' + imageSrc + '" data-bs-original-src="' + imageSrc + '" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Image metadata goes here" onclick="zoomImage(this)"></div>');
-
-                // var image = $('<div class="col-4"><div class="card"><img class="card-img-top" src="' + imageSrc + '" data-bs-original-src="' + imageSrc + '" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Image metadata goes here" onclick="zoomImage(this)"></div></div>');
-                // $('#imageContainer').append(image);
-
-            // });
-
-            data.urls.forEach(function(imageSrc) {
-                var image = $('<div class="card"><img class="card-img-top" src="' + imageSrc + '" data-bs-original-src="' + imageSrc + '" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Image metadata goes here" onclick="zoomImage(this)"></div>');
-                $('#imageContainer').append(image);
-            });
-
-            // Initialize Masonry after all images have been loaded
+            // Create a reference to your Masonry layout
             var $grid = $('.masonry-grid').masonry({
                 itemSelector: '.card',
                 percentPosition: true
             });
 
-            $grid.imagesLoaded().progress(function() {
-                $grid.masonry();
+            data.data.forEach(function(imageData) {
+                var imageSrc = imageData.url;
+                var metadata = imageData.metadata || {};
+                var labels = imageData.labels || [];
+                var tooltipText = "Labels: " + labels.join(", ") + "\n" +
+                    // "Time: " + (metadata.timestamp || "") + "\n" +
+                    "Time: " + (metadata.timestamp ? new Date(metadata.timestamp).toLocaleString() : "")+
+                "Location: " + (metadata.country || "") + ", " + (metadata.administrative_area_level_1 || "") + (metadata.city?(", "+metadata.city) : "");
+                var image = $('<div class="card"><img class="card-img-top" src="' + imageSrc + '" data-bs-original-src="' + imageSrc + '" data-bs-toggle="tooltip" data-bs-placement="bottom" title="' + tooltipText + '" onclick="zoomImage(this)"></div>');
+                $('#imageContainer').append(image);
+                $grid.append(image).masonry('appended', image);  // Append image to Masonry
             });
+
+            $grid.imagesLoaded().done(function() {
+                $grid.masonry('reloadItems').masonry('layout');  // Reload Masonry layout
+            });
+
             // Refresh tooltips
             enableTooltips();
         },
@@ -155,50 +218,3 @@ function zoomImage(img) {
     });
 }
 
-$("#location").on('input', function() {
-    let value = $(this).val();
-    $.ajax({
-        url: "/main/initLocation",
-        type: 'GET',
-        data: {
-            key: value
-        },
-        success: function (data) {
-            $("#location").autocomplete({
-                source: data,
-                delay: 300 // Delay in milliseconds
-            });
-        },
-        error: function (error) {
-            console.log('Error:', error);
-        }
-    });
-});
-
-
-function initAutocomplete() {
-
-
-}
-
-
-
-
-
-
-
-
-
-
-// function loadImages() {
-//     for (var i = 0; i < 20; i++) {
-//         var imageHeight = 200 + Math.floor(Math.random() * 300);  // random height between 200 and 500
-//         var imageSrc = i%2 === 0
-//             ? 'https://photoapp-nu-cs310-yzl7889.s3.us-east-2.amazonaws.com/test/kengan-ashura.jpeg'
-//             : 'https://photoapp-nu-cs310-yzl7889.s3.us-east-2.amazonaws.com/2b19e585-5c81-486a-bded-810538c20cc0/374115b5-dcb0-4f57-9373-664ec481f0a5.jpg';
-//         var image = $('<div class="card"><img class="card-img-top" src="' + imageSrc + '" data-bs-original-src="' + imageSrc + '" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Image metadata goes here" onclick="zoomImage(this)"></div>');
-//         $('#imageContainer').append(image);
-//     }
-//     // Refresh tooltips
-//     enableTooltips();
-// }

@@ -1,8 +1,29 @@
 const axios = require('axios');
 const ExifParser = require('exif-parser');
 const { Client } = require('@googlemaps/google-maps-services-js');
+const vision = require('@google-cloud/vision');
+const path = require('path');  // 引入 Node.js 的 path 模块
 
 class ImageUtils {
+
+    // call Google vision API to get label info
+    static async getLabelsFromImage(file) {
+        const client = new vision.ImageAnnotatorClient({
+            keyFilename: path.join(__dirname, '../studious-optics-388905-554dfafd7d7d.json')
+        });
+
+        const [result] = await client.labelDetection({
+            image: { content: file.buffer.toString('base64') }
+        });
+
+        const labels = result.labelAnnotations;
+        return labels;
+
+    }
+
+
+
+
     static async getExifData(file) {
         try {
             // const response = await axios.get(imageUrl, {responseType: 'arraybuffer'});
@@ -88,7 +109,6 @@ class ImageUtils {
                     break;
             }
         }
-
         return geoData;
     }
 }

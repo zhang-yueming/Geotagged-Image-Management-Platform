@@ -28,8 +28,8 @@ const Image = sequelize.define('Image', {
 }, {
     sequelize,
     modelName: 'Image',
-    timestamps: false, // 防止Sequelize自动添加createdAt和updatedAt字段
-    tableName: 'image', // 显式声明表名
+    timestamps: false, // prevent Sequelize from adding createdAt,updatedAt
+    tableName: 'image', //
 });
 
 module.exports = {

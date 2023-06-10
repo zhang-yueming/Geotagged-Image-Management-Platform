@@ -1,6 +1,6 @@
 const { sequelize, Sequelize } = require('../database');
 const { DataTypes } = Sequelize;
-const {Image} = require('./Image'); // Image模型
+const {Image} = require('./Image'); //
 
 const ImageMetadata = sequelize.define('ImageMetadata', {
     image_id: {
@@ -8,7 +8,7 @@ const ImageMetadata = sequelize.define('ImageMetadata', {
         allowNull: false,
         primaryKey: true,
         references: {
-            model: Image, // 这是你的Image模型
+            model: Image, //
             key: 'image_id'
         }
     },
@@ -42,8 +42,8 @@ const ImageMetadata = sequelize.define('ImageMetadata', {
 }, {
     sequelize,
     modelName: 'ImageMetadata',
-    timestamps: false, // 防止Sequelize自动添加createdAt和updatedAt字段
-    tableName: 'image_metadata', // 显式声明表名
+    timestamps: false, // prevent Sequelize from adding createdAt,updatedAt
+    tableName: 'image_metadata', //
 });
 
 
